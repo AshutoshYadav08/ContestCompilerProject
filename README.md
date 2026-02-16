@@ -89,13 +89,6 @@ CREATE INDEX idx_submissions_contest_participant ON submissions(contest_id, part
 CREATE INDEX idx_submissions_contest_problem ON submissions(contest_id, problem_id);
 ```
 
-
-## Realtime mock behavior (no backend)
-
-- Uses localStorage as an in-browser mock database (`lib/mockDb.ts`).
-- Uses fake async API wrappers (`lib/apiClient.ts`) so replacing with real backend `fetch` later is straightforward.
-- Realtime updates are simulated through polling + `mock-db-updated` window event.
-
 ## Routes implemented
 
 - `/`
