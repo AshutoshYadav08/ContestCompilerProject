@@ -9,6 +9,34 @@ const starter = `# Paste solution here\n\nprint('hello contest')`;
 
 export default function ProblemPage() {
   const params = useParams<{ id: string; problemId: string }>();
+  const { user } = useAuth();
+  const [code, setCode] = useState(starter);
+  const [detail, setDetail] = useState<Awaited<ReturnType<typeof fetchContestDetail>> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [output, setOutput] = useState("Run output will appear here...");
+  const [submitting, setSubmitting] = useState(false);
+
+  const load = async () => {
+    const response = await fetchContestDetail(params.id);
+    setDetail(response);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 2000);
+    const onUpdate = () => load();
+    window.addEventListener("mock-db-updated", onUpdate);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("mock-db-updated", onUpdate);
+    };
+  }, [params.id]);
+
+  const problem = useMemo(() => detail?.problems.find((candidate) => candidate.id === params.problemId), [detail, params.problemId]);
+
+  if (loading) return <LoadingState label="Loading problem..." />;
+  if (!problem || !detail) return <div className="text-rose-400">Problem not found in this contest.</div>;
   const [code, setCode] = useState(starter);
   const [detail, setDetail] = useState<Awaited<ReturnType<typeof fetchContestDetail>> | null>(null);
   const [loading, setLoading] = useState(true);
