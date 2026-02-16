@@ -1,12 +1,13 @@
-import { Contest, ContestPhase, JoinRequest, Problem, StandingsRow, Submission, User } from "@/types";
+import { contests, joinRequests, problems, submissions, users } from "@/lib/sampleData";
+import { Contest, ContestPhase, Problem, StandingsRow, Submission } from "@/types";
 
-export function getContestById(contests: Contest[], contestId: string): Contest | undefined {
+export function getContestById(contestId: string): Contest | undefined {
   return contests.find((contest) => contest.id === contestId);
 }
 
-export function getContestProblems(allProblems: Problem[], contest: Contest): Problem[] {
+export function getContestProblems(contest: Contest): Problem[] {
   return contest.problemIds
-    .map((problemId) => allProblems.find((problem) => problem.id === problemId))
+    .map((problemId) => problems.find((problem) => problem.id === problemId))
     .filter((problem): problem is Problem => Boolean(problem));
 }
 
@@ -15,34 +16,45 @@ export function getContestPhase(contest: Contest): ContestPhase {
   const start = new Date(contest.startTime).getTime();
   const end = start + contest.durationMinutes * 60 * 1000;
 
-  if (now < start) return "upcoming";
-  if (now <= end) return "running";
+  if (now < start) {
+    return "upcoming";
+  }
+  if (now >= start && now <= end) {
+    return "running";
+  }
   return "ended";
 }
 
-export function getContestSubmissions(allSubmissions: Submission[], contestId: string): Submission[] {
-  return allSubmissions
+export function getContestSubmissions(contestId: string): Submission[] {
+  return submissions
     .filter((submission) => submission.contestId === contestId)
     .sort((a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime());
 }
 
-export function getStandings(contest: Contest, allSubmissions: Submission[]): StandingsRow[] {
-  const contestSubmissions = getContestSubmissions(allSubmissions, contest.id);
+export function getStandings(contest: Contest): StandingsRow[] {
+  const contestSubmissions = getContestSubmissions(contest.id);
 
   const rows = contest.participants.map((participantId) => {
     const participantSubs = contestSubmissions.filter((submission) => submission.participantId === participantId);
     const acceptedProblemIds = new Set(
       participantSubs.filter((submission) => submission.status === "Accepted").map((submission) => submission.problemId)
     );
+
     const score = participantSubs.reduce((sum, current) => sum + current.score, 0);
     const wrongAttempts = participantSubs.filter((sub) => sub.status !== "Accepted").length;
+    const penalty = wrongAttempts * contest.settings.penaltyPerWrongMinutes;
+    const latestAccepted = participantSubs
+      .filter((sub) => sub.status === "Accepted")
+      .map((sub) => sub.submittedAt)
+      .sort()
+      .at(-1);
 
     return {
       participantId,
       solved: acceptedProblemIds.size,
       score,
-      penalty: wrongAttempts * contest.settings.penaltyPerWrongMinutes,
-      lastAcceptedAt: participantSubs.filter((sub) => sub.status === "Accepted").map((sub) => sub.submittedAt).sort().at(-1),
+      penalty,
+      lastAcceptedAt: latestAccepted,
       rank: 0
     };
   });
@@ -56,14 +68,16 @@ export function getStandings(contest: Contest, allSubmissions: Submission[]): St
   return rows.map((row, index) => ({ ...row, rank: index + 1 }));
 }
 
-export function getProblemStats(contest: Contest, allProblems: Problem[], allSubmissions: Submission[]) {
-  const contestSubs = getContestSubmissions(allSubmissions, contest.id);
+export function getProblemStats(contest: Contest) {
+  const contestSubs = getContestSubmissions(contest.id);
 
   return contest.problemIds.map((problemId) => {
-    const problem = allProblems.find((candidate) => candidate.id === problemId);
+    const problem = problems.find((candidate) => candidate.id === problemId);
     const problemSubs = contestSubs.filter((sub) => sub.problemId === problemId);
     const triedBy = new Set(problemSubs.map((sub) => sub.participantId)).size;
-    const solvedBy = new Set(problemSubs.filter((sub) => sub.status === "Accepted").map((sub) => sub.participantId)).size;
+    const solvedBy = new Set(
+      problemSubs.filter((sub) => sub.status === "Accepted").map((sub) => sub.participantId)
+    ).size;
 
     return {
       problemId,
@@ -75,8 +89,11 @@ export function getProblemStats(contest: Contest, allProblems: Problem[], allSub
   });
 }
 
-export function getContestJoinRequests(contestId: string, requests: JoinRequest[], users: User[]) {
-  return requests
+export function getContestJoinRequests(contestId: string) {
+  return joinRequests
     .filter((request) => request.contestId === contestId)
-    .map((request) => ({ ...request, participant: users.find((user) => user.id === request.participantId) }));
+    .map((request) => ({
+      ...request,
+      participant: users.find((user) => user.id === request.participantId)
+    }));
 }

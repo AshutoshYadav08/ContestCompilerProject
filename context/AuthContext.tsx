@@ -1,6 +1,5 @@
 "use client";
 
-import { fetchUsers } from "@/lib/apiClient";
 import { User } from "@/types";
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 
@@ -24,16 +23,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    fetchUsers()
-      .then((allUsers) => setUser(allUsers.find((candidate) => candidate.id === initial) ?? null))
+    fetch(`/api/users?id=${initial}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((resolved) => setUser(resolved))
       .finally(() => setLoading(false));
   }, []);
 
   const loginById = async (id: string) => {
-    const allUsers = await fetchUsers();
-    const resolved = allUsers.find((candidate) => candidate.id === id);
-    if (!resolved) return { ok: false, message: "User id not found in sample data" };
+    const response = await fetch(`/api/users?id=${id}`);
+    if (!response.ok) {
+      return { ok: false, message: "User id not found in sample data" };
+    }
 
+    const resolved: User = await response.json();
     setUser(resolved);
     localStorage.setItem("mock-user-id", resolved.id);
     return { ok: true };
@@ -45,11 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const value = useMemo(() => ({ user, loading, loginById, logout }), [user, loading]);
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used inside AuthProvider");
+  if (!context) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
   return context;
 }
