@@ -57,7 +57,6 @@ export type JoinRequest = {
 export type Contest = {
   id: string;
   name: string;
-  description?: string;
   slug: string;
   organiserId: string;
   startTime: string;

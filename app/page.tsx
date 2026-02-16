@@ -2,11 +2,11 @@
 
 import { LoadingState } from "@/components/LoadingState";
 import { useAuth } from "@/context/AuthContext";
-import { fetchContests, sendJoinRequest } from "@/lib/apiClient";
-import { Contest } from "@/types";
+import { fetchContests } from "@/lib/apiClient";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import { Contest } from "@/types";
+import { useRouter } from "next/navigation";
 
 export default function HomePage() {
   const { user, loading } = useAuth();
@@ -19,7 +19,7 @@ export default function HomePage() {
     fetchContests().then(setContests).catch(() => setError("Failed to fetch contests"));
   }, []);
 
-  const onJoin = async (event: FormEvent) => {
+  const onJoin = (event: FormEvent) => {
     event.preventDefault();
     if (!joinId.trim()) return;
 
@@ -27,11 +27,6 @@ export default function HomePage() {
     if (!found) {
       setError("Contest id not found. Use a valid id from list below.");
       return;
-    }
-
-    if (user?.role === "participant") {
-      // Fake backend call: can be replaced later with POST /api/contests/:id/join-request
-      await sendJoinRequest(found.id, user.id);
     }
 
     router.push(`/contest/${found.id}`);
@@ -61,9 +56,6 @@ export default function HomePage() {
 
       <section className="rounded border border-slate-700 bg-slate-800 p-5">
         <h2 className="text-lg font-semibold text-emerald-300">Join Contest</h2>
-        <p className="mb-3 text-xs text-slate-400">
-          Participant join flow: entering contest id creates a pending join request and redirects to waiting lobby at /contest/:id.
-        </p>
         <form onSubmit={onJoin} className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input
             value={joinId}

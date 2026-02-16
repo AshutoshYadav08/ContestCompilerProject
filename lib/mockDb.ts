@@ -99,7 +99,6 @@ export function createContestWithProblems(payload: {
     state.contests.unshift({
       id: contestId,
       name: payload.name,
-      description: payload.description,
       slug: payload.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
       organiserId: payload.organiserId,
       startTime: payload.startTime,
